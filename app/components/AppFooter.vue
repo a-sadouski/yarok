@@ -24,7 +24,7 @@ const contactLinks = [
       <div class="flex flex-col sm:flex-row justify-between items-center">
         <div class="max-w-sm">
           <NuxtLink to="/" class="inline-flex items-center">
-            <img src="/images/logo.png" alt="Ярок" class="h-14 w-auto" />
+            <img src="/images/logo.png" alt="Ярок" class="h-14 w-auto" >
           </NuxtLink>
         </div>
 

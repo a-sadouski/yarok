@@ -70,7 +70,7 @@ onBeforeUnmount(() => {
             class="flex items-center gap-2 text-sm font-bold tracking-wide text-primary-700"
             @click="closeMobileMenu"
           >
-            <img src="/images/logo.png" alt="Ярок" class="h-8 w-auto" />
+            <img src="/images/logo.png" alt="Ярок" class="h-8 w-auto" >
           </NuxtLink>
 
           <nav class="hidden items-center gap-8 md:flex">

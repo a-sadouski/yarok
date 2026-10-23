@@ -1,12 +1,4 @@
 <script setup lang="ts">
-import { ProductsApi } from '~/api/products.api';
-import type {
-  CatalogProductColorOption,
-  CatalogProductMetaById,
-  ProductCategory,
-  ProductColor,
-  ProductItem,
-} from '~/types';
 import Loader from '~/components/common/Loader.vue';
 
 const route = useRoute();
@@ -98,65 +90,8 @@ const seoTextMap: Record<string, { title: string; paragraphs: string[] }> = {
 
 const seoContent = computed(() => (category.value ? (seoTextMap[category.value] ?? null) : null));
 
-const { data, pending } = await useAsyncData('catalog-data', async () => {
-  const [loadedCategories, loadedProducts, loadedColors] = await Promise.all([
-    ProductsApi.getAllCategories(),
-    ProductsApi.getAllProducts(),
-    ProductsApi.getAllColors(),
-  ]);
-
-  return {
-    categories: loadedCategories,
-    products: loadedProducts,
-    colors: loadedColors,
-  };
-});
-
-const categories = computed<ProductCategory[]>(() => data.value?.categories ?? []);
-const products = computed<ProductItem[]>(() => data.value?.products ?? []);
-const colors = computed<ProductColor[]>(() => data.value?.colors ?? []);
-
-const isLoading = pending;
-
-const currentCategory = computed(() => categories.value.find(c => c.slug === category.value));
-
-const colorById = computed<Record<number, ProductColor>>(() => {
-  return colors.value.reduce<Record<number, ProductColor>>((acc, color) => {
-    acc[color.id] = color;
-    return acc;
-  }, {});
-});
-
-const productMetaById = computed<CatalogProductMetaById>(() => {
-  return products.value.reduce<CatalogProductMetaById>((acc, product) => {
-    const colorOptions: CatalogProductColorOption[] = product.variants
-      .filter(v => v.isActive && v.inStock && v.colorId !== null)
-      .map(v => {
-        const color = colorById.value[v.colorId!];
-        if (!color) return null;
-
-        const price = Number(v.price);
-        if (Number.isNaN(price)) return null;
-
-        return {
-          variationId: v.id,
-          colorId: color.id,
-          colorName: color.name,
-          colorHex: color.hex,
-          price,
-        };
-      })
-      .filter((o): o is CatalogProductColorOption => Boolean(o))
-      .sort((a, b) => a.price - b.price);
-
-    acc[product.id] = {
-      colorOptions,
-      defaultVariationId: colorOptions[0]?.variationId ?? null,
-    };
-
-    return acc;
-  }, {});
-});
+const { categories, products, productMetaById, isLoading, error, refresh } = await useCatalog();
+const currentCategory = computed(() => categories.value.find(item => item.slug === category.value));
 </script>
 <template>
   <div class="min-h-screen bg-[#f8f6f5] text-primary-700">
@@ -176,6 +111,11 @@ const productMetaById = computed<CatalogProductMetaById>(() => {
       <div v-if="isLoading" class="flex flex-1 items-center justify-center">
         <Loader size="lg" label="Загрузка каталога..." />
       </div>
+
+      <section v-else-if="error" class="mx-auto max-w-7xl px-4 py-6" role="alert">
+        <p>Не удалось загрузить каталог. Попробуйте ещё раз.</p>
+        <UButton label="Повторить загрузку" class="mt-3" @click="refresh()" />
+      </section>
 
       <section v-else class="py-6">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

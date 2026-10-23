@@ -1,15 +1,9 @@
-export type Category = {
-  id: number;
-  name: string;
-  slug: string;
-};
-
 export type ProductVariant = {
   id: number;
   productId: number;
   colorId: number | null;
-  price: string | number;
-  oldPrice: string | number | null;
+  price: string;
+  oldPrice: string | null;
   sku: string | null;
   inStock: boolean;
   isActive: boolean;
@@ -17,7 +11,7 @@ export type ProductVariant = {
 
 export interface ProductItem {
   id: number;
-  categoryId: number;
+  categoryId: number | null;
   name: string;
   slug: string;
   description: string | null;
@@ -25,7 +19,7 @@ export interface ProductItem {
   previewImage: string | null;
   isActive: boolean;
   isVariable: boolean;
-  createdAt: string;
+  createdAt: string | null;
   variants: ProductVariant[];
 }
 
@@ -35,15 +29,6 @@ export interface ProductVariantFormState {
   sku: string;
   inStock: boolean;
 }
-
-export type ProductVariantFormItem = {
-  colorId: number | null;
-  price: string;
-  oldPrice: string;
-  sku: string;
-  inStock: boolean;
-  isActive?: boolean;
-};
 
 export interface ProductFormState {
   name: string;
@@ -80,7 +65,7 @@ export interface ProductColor {
   id: number;
   name: string;
   slug: string;
-  hex: string;
+  hex: string | null;
 }
 
 export type ProductCategory = {
@@ -103,3 +88,11 @@ export interface CatalogProductMeta {
 }
 
 export type CatalogProductMetaById = Record<number, CatalogProductMeta>;
+
+export interface ProductSaveResult {
+  id: number;
+  name: string;
+  slug: string;
+  isVariable: boolean;
+  imagePath: string | null;
+}

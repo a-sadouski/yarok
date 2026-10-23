@@ -1,3 +1,5 @@
+import { AdminApi } from '~/api/admin.api';
+
 export default defineNuxtRouteMiddleware(async to => {
   if (!to.path.startsWith('/admin')) {
     return;
@@ -8,7 +10,7 @@ export default defineNuxtRouteMiddleware(async to => {
   }
 
   try {
-    await useRequestFetch()('/api/admin/me');
+    await AdminApi.me(useRequestFetch());
   } catch {
     return navigateTo('/admin/login');
   }

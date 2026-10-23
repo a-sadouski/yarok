@@ -2,11 +2,7 @@
 import { computed } from 'vue';
 import { ProductsApi } from '~/api/products.api';
 
-type Category = {
-  id: number;
-  name: string;
-  slug: string;
-};
+import type { ProductCategory } from '~/types';
 
 type CategoryCard = {
   id: number;
@@ -35,7 +31,7 @@ const categoryUiMap: Record<string, { image: string; alt: string }> = {
   },
 };
 
-const { data: categories } = await useAsyncData<Category[]>('product-categories-home', () =>
+const { data: categories } = await useAsyncData<ProductCategory[]>('product-categories-home', () =>
   ProductsApi.getAllCategories(),
 );
 
@@ -86,7 +82,7 @@ const items = computed((): CategoryCard[] => {
                 :src="item.image"
                 :alt="item.alt"
                 class="h-56 w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-              />
+              >
             </div>
 
             <div class="px-1 pt-4">

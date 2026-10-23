@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive } from 'vue';
+import { getApiErrorMessage } from '~/utils/api-error';
 import { ContactsApi } from '~/api/contacts.api';
 
 const contactItems = [
@@ -56,10 +57,10 @@ async function submitRequest() {
     formState.phone = '';
     formState.comment = '';
     formState.company = '';
-  } catch (error: any) {
+  } catch (error) {
     toast.add({
       title: 'Ошибка отправки',
-      description: error?.data?.statusMessage || 'Не удалось отправить заявку',
+      description: getApiErrorMessage(error, 'Не удалось отправить заявку. Попробуйте ещё раз позже.'),
       color: 'error',
     });
   } finally {
@@ -120,7 +121,7 @@ async function submitRequest() {
 
           <UForm :state="formState" class="mt-8 space-y-5" @submit="submitRequest">
             <div class="hidden" aria-hidden="true">
-              <input v-model="formState.company" type="text" tabindex="-1" autocomplete="off" />
+              <input v-model="formState.company" type="text" tabindex="-1" autocomplete="off" >
             </div>
 
             <UFormField label="Ваше имя" name="name">

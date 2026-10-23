@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { AdminApi } from '~/api/admin.api';
 const toast = useToast();
 
 const form = reactive({
@@ -16,10 +17,7 @@ async function onSubmit() {
   isLoading.value = true;
 
   try {
-    await $fetch('/api/admin/login', {
-      method: 'POST',
-      body: form,
-    });
+    await AdminApi.login(form);
 
     await navigateTo('/admin/products');
   } catch {

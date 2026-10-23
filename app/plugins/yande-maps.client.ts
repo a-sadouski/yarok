@@ -1,13 +1,15 @@
+import type { YandexMaps } from '~/types/yandex-maps';
+
 declare global {
   interface Window {
-    ymaps?: any;
+    ymaps?: YandexMaps;
   }
 }
 
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
 
-  const loadYandexMaps = (): Promise<any> => {
+  const loadYandexMaps = (): Promise<YandexMaps> => {
     return new Promise((resolve, reject) => {
       if (typeof window === 'undefined') {
         reject(new Error('Yandex Maps can be loaded only on client side'));

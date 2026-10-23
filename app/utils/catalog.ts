@@ -39,6 +39,8 @@ export function getProductOldMinPrice(product: ProductItem): number | null {
 }
 
 export function formatCatalogPrice(price: number | null, unit = 'BYN'): string {
-  if (price === null) return 'Цена по запросу';
+  if (price === null) {
+    return 'Цена по запросу';
+  }
   return `от ${price} ${unit}`;
 }

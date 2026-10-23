@@ -14,7 +14,6 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       yandexMapsApiKey: process.env.NUXT_PUBLIC_YANDEX_MAPS_API_KEY,
-      supabaseUrl: process.env.SUPABASE_URL,
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL,
     },
   },

@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import ProductPreviewCard from './ProductPreviewCard.vue';
-import type { CategoryOption, ColorOption, ProductFormState, ProductPreviewCardModel } from '~/types/product';
+import type {
+  CategoryOption,
+  ColorOption,
+  ProductFormState,
+  ProductPreviewCardModel,
+  ProductVariantFormState,
+} from '~/types/product';
 
 const toast = useToast();
 
 const props = defineProps<{
   open: boolean;
   isEditing: boolean;
+  saving: boolean;
   formState: ProductFormState;
   categoryOptions: CategoryOption[];
   colorOptions: ColorOption[];
@@ -15,23 +22,47 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'update:open': [value: boolean];
+  'update:formState': [value: ProductFormState];
   submit: [];
   close: [];
   imageChange: [event: Event];
   removeImage: [];
 }>();
 
+function updateField<K extends keyof ProductFormState>(key: K, value: ProductFormState[K]) {
+  emit('update:formState', { ...props.formState, [key]: value });
+}
+
+function updateVariant<K extends keyof ProductVariantFormState>(
+  index: number,
+  key: K,
+  value: ProductVariantFormState[K],
+) {
+  updateField(
+    'variants',
+    props.formState.variants.map((variant, itemIndex) =>
+      itemIndex === index ? { ...variant, [key]: value } : variant,
+    ),
+  );
+}
+
 function addVariant() {
-  props.formState.variants.push({
-    colorId: null,
-    price: '',
-    sku: '',
-    inStock: true,
-  });
+  updateField('variants', [
+    ...props.formState.variants,
+    {
+      colorId: null,
+      price: '',
+      sku: '',
+      inStock: true,
+    },
+  ]);
 }
 
 function removeVariant(index: number) {
-  props.formState.variants.splice(index, 1);
+  updateField(
+    'variants',
+    props.formState.variants.filter((_, itemIndex) => itemIndex !== index),
+  );
 }
 
 function handleSubmit() {
@@ -93,7 +124,7 @@ function handleSubmit() {
 </script>
 
 <template>
-  <UModal :open="open" :ui="{ content: 'max-w-7xl' }" @update:open="emit('update:open', $event)">
+  <UModal :dismissible="!saving" :open="open" :ui="{ content: 'max-w-7xl' }" @update:open="emit('update:open', $event)">
     <template #content>
       <div class="overflow-auto rounded-[28px] bg-white p-6 sm:p-8">
         <div class="flex items-start justify-between gap-4">
@@ -103,32 +134,47 @@ function handleSubmit() {
             </h2>
           </div>
 
-          <UButton icon="i-lucide-x" color="neutral" variant="ghost" square @click="emit('close')" />
+          <UButton
+            icon="i-lucide-x"
+            color="neutral"
+            variant="ghost"
+            square
+            aria-label="Закрыть форму"
+            :disabled="saving"
+            @click="emit('close')"
+          />
         </div>
 
-        <UForm :state="formState" @submit="handleSubmit">
+        <UForm :disabled="saving" :state="formState" @submit="handleSubmit">
           <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_380px]">
             <div class="space-y-5">
               <UFormField label="Название товара" name="name" required>
-                <UInput v-model="formState.name" placeholder="Например, Старый город" class="w-full" />
+                <UInput
+                  :model-value="formState.name"
+                  placeholder="Например, Старый город"
+                  class="w-full"
+                  @update:model-value="updateField('name', $event)"
+                />
               </UFormField>
 
               <UFormField label="Категория" name="categoryId" required>
                 <USelect
-                  :model-value="formState.categoryId ?? undefined" @update:model-value="formState.categoryId = $event ?? null"
+                  :model-value="formState.categoryId ?? undefined"
                   :items="categoryOptions"
                   value-key="value"
                   option-attribute="label"
                   class="w-full"
+                  @update:model-value="updateField('categoryId', $event ?? null)"
                 />
               </UFormField>
 
               <UFormField label="Описание" name="description">
                 <UTextarea
-                  v-model="formState.description"
+                  :model-value="formState.description"
                   :rows="2"
                   placeholder="Краткое описание товара"
                   class="w-full"
+                  @update:model-value="updateField('description', $event)"
                 />
               </UFormField>
 
@@ -143,7 +189,10 @@ function handleSubmit() {
                     </p>
                   </div>
 
-                  <USwitch v-model="formState.isVariable"> </USwitch>
+                  <USwitch
+                    :model-value="formState.isVariable"
+                    @update:model-value="updateField('isVariable', $event)"
+                  />
                 </div>
               </UFormField>
 
@@ -151,17 +200,23 @@ function handleSubmit() {
                 <div class="grid gap-4 sm:grid-cols-2">
                   <UFormField label="Цена" name="price" required>
                     <UInput
-                      v-model="formState.price"
+                      :model-value="formState.price"
                       type="number"
                       min="0"
                       step="0.01"
                       placeholder="Например, 45"
                       class="w-full"
+                      @update:model-value="updateField('price', String($event ?? ''))"
                     />
                   </UFormField>
 
                   <UFormField label="SKU" name="sku">
-                    <UInput v-model="formState.sku" placeholder="Например, SG-BASE" class="w-full" />
+                    <UInput
+                      :model-value="formState.sku"
+                      placeholder="Например, SG-BASE"
+                      class="w-full"
+                      @update:model-value="updateField('sku', $event)"
+                    />
                   </UFormField>
                 </div>
 
@@ -173,7 +228,7 @@ function handleSubmit() {
                       <p class="text-sm font-semibold text-primary-700">В наличии</p>
                     </div>
 
-                    <USwitch v-model="formState.inStock" />
+                    <USwitch :model-value="formState.inStock" @update:model-value="updateField('inStock', $event)" />
                   </div>
                 </UFormField>
               </template>
@@ -222,28 +277,35 @@ function handleSubmit() {
 
                     <UFormField label="Цвет" :name="`variants.${index}.colorId`" required>
                       <USelect
-                        :model-value="variant.colorId ?? undefined" @update:model-value="variant.colorId = $event ?? null"
+                        :model-value="variant.colorId ?? undefined"
                         :items="colorOptions"
                         value-key="value"
                         option-attribute="label"
                         class="w-full"
+                        @update:model-value="updateVariant(index, 'colorId', $event ?? null)"
                       />
                     </UFormField>
 
                     <div class="grid gap-4 sm:grid-cols-2">
                       <UFormField label="Цена" :name="`variants.${index}.price`" required>
                         <UInput
-                          v-model="variant.price"
+                          :model-value="variant.price"
                           type="number"
                           min="0"
                           step="0.01"
                           placeholder="Например, 45"
                           class="w-full"
+                          @update:model-value="updateVariant(index, 'price', String($event ?? ''))"
                         />
                       </UFormField>
 
                       <UFormField label="SKU" :name="`variants.${index}.sku`">
-                        <UInput v-model="variant.sku" placeholder="Например, SG-GRAY" class="w-full" />
+                        <UInput
+                          :model-value="variant.sku"
+                          placeholder="Например, SG-GRAY"
+                          class="w-full"
+                          @update:model-value="updateVariant(index, 'sku', $event)"
+                        />
                       </UFormField>
                     </div>
 
@@ -255,7 +317,10 @@ function handleSubmit() {
                           <p class="text-sm font-semibold text-primary-700">В наличии</p>
                         </div>
 
-                        <USwitch v-model="variant.inStock" />
+                        <USwitch
+                          :model-value="variant.inStock"
+                          @update:model-value="updateVariant(index, 'inStock', $event)"
+                        />
                       </div>
                     </UFormField>
                   </div>
@@ -271,7 +336,7 @@ function handleSubmit() {
                     <span class="mt-3 text-sm font-semibold text-primary-700">Выбрать изображение</span>
                     <span class="mt-1 text-xs text-slate-500">PNG, JPG, WEBP</span>
 
-                    <input type="file" accept="image/*" class="hidden" @change="emit('imageChange', $event)" />
+                    <input type="file" accept="image/*" class="hidden" @change="emit('imageChange', $event)" >
                   </label>
 
                   <div v-if="formState.previewImage" class="flex items-center gap-3">
@@ -295,7 +360,7 @@ function handleSubmit() {
                     <p class="mt-1 text-xs text-slate-500">Неактивные товары можно скрыть без удаления.</p>
                   </div>
 
-                  <USwitch v-model="formState.isActive" />
+                  <USwitch :model-value="formState.isActive" @update:model-value="updateField('isActive', $event)" />
                 </div>
               </UFormField>
             </div>
@@ -304,9 +369,18 @@ function handleSubmit() {
               <ProductPreviewCard :preview="previewCard" />
 
               <div class="mt-12 flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
-                <UButton label="Отмена" variant="soft" color="neutral" class="rounded-full" @click="emit('close')" />
+                <UButton
+                  label="Отмена"
+                  :disabled="saving"
+                  variant="soft"
+                  color="neutral"
+                  class="rounded-full"
+                  @click="emit('close')"
+                />
 
                 <UButton
+                  :loading="saving"
+                  :disabled="saving"
                   type="submit"
                   :label="isEditing ? 'Сохранить изменения' : 'Добавить товар'"
                   class="cursor-pointer rounded-full bg-secondary-700 px-6 text-white hover:bg-secondary-500"

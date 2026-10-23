@@ -1,0 +1,62 @@
+# Локальное окружение
+
+## Настройки
+
+В `yarok/.env`:
+
+| Переменная | Назначение |
+| --- | --- |
+| `YAROK_BACKEND_URL` | Backend без завершающего `/`; по умолчанию `http://localhost:5050`, применяется при сборке |
+| `NUXT_PUBLIC_SITE_URL` | Абсолютный адрес сайта для canonical и Open Graph |
+| `NUXT_PUBLIC_YANDEX_MAPS_API_KEY` | Публичный ключ карты; ограничьте разрешённые origin |
+
+В `yarok-be/.env`, на основе его `.env.example`:
+
+| Переменная | Назначение |
+| --- | --- |
+| `DATABASE_URL` | PostgreSQL URI или Npgsql connection string |
+| `ADMIN_LOGIN`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET` | Администратор и подпись сессии; замените шаблонные значения |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | Storage; service-role key используется только backend |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `CONTACT_TO_EMAIL` | SMTP с авторизацией и тестовый получатель |
+| `ASPNETCORE_ENVIRONMENT`, `ASPNETCORE_URLS` | Локально: `Development`, `http://localhost:5050` |
+
+Оба `.env` исключены из Git. `Start-Dev.ps1` загружает backend `.env`; обычный `dotnet run` этого не делает. После изменения frontend `.env` перезапустите Nuxt.
+
+Backend проверяет наличие настроек при старте, но это не проверка доступности сервисов. Без доступных SMTP/Storage каталог можно читать, но отправка заявок/загрузка файлов не работает. Без ключа карты её работа не гарантируется.
+
+## Новая локальная база
+
+Команды из корня frontend. Предполагаются PostgreSQL на localhost:5432 и пользователь postgres; пароль вводится по запросу. В backend `.env` укажите ту же базу.
+
+```powershell
+createdb -h localhost -p 5432 -U postgres yarok
+psql -h localhost -p 5432 -U postgres -d yarok -v ON_ERROR_STOP=1 -f ../yarok-be/database/001_schema.sql
+psql -h localhost -p 5432 -U postgres -d yarok -v ON_ERROR_STOP=1 -f docs/seed.local.sql
+```
+
+Схема предназначена только для пустой БД. Seed требует пустого каталога и прерывается при наличии данных. Создаёт четыре категории, два цвета, простой и вариативный товар. Цены демонстрационные; для изображений используется frontend-заглушка.
+
+Для существующей базы этот сценарий не подходит. Backend `002_legacy_alignment.sql` — ручное выравнивание старой схемы, а не обязательный второй шаг новой установки. Не применяйте его автоматически: сначала сравните схему и подготовьте резервную копию.
+
+## Storage
+
+Создайте в Supabase публичный bucket `products-images`. Backend загружает файлы через service-role key и возвращает публичные URL. Для демо используйте отдельные ресурсы и тестовый адрес получателя писем.
+
+## Проверка после запуска
+
+1. `Invoke-RestMethod http://localhost:5050/health` возвращает `status: ok`. Проверяется только процесс, без обращения к БД.
+2. `Invoke-RestMethod http://localhost:3000/api/categories` возвращает четыре категории из seed; это проверяет proxy и подключение к БД.
+3. `/catalog` показывает плитку с переключением цвета и цены; категория «Бордюры» — простой товар.
+4. `/admin/products` без сессии перенаправляет на `/admin/login`.
+5. После входа создание и редактирование товара отражается в каталоге.
+6. При настроенном Storage загрузите тестовое изображение; при настроенном SMTP отправьте заявку на тестовый адрес и проверьте получение.
+
+## Диагностика
+
+- Ошибка proxy: проверьте backend на 5050 и `YAROK_BACKEND_URL`.
+- `Missing configuration`: заполните backend `.env` и используйте `Start-Dev.ps1`.
+- `/health` работает, каталог нет: проверьте подключение к PostgreSQL и наличие схемы.
+- Не сохраняется изображение: проверьте bucket, service-role key и доступность Supabase.
+- В production не работает вход: backend использует secure cookie; нужен HTTPS.
+
+Актуальные маршруты описаны в `yarok-be/README.md`, реализация — `yarok-be/src/Yarok.Api/Program.cs`. Frontend обращается к ним через `/api/**`.

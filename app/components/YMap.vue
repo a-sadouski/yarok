@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { YandexMap } from '~/types/yandex-maps';
 const props = withDefaults(
   defineProps<{
     center?: [number, number];
@@ -13,7 +14,7 @@ const props = withDefaults(
 );
 
 const mapEl = ref<HTMLElement | null>(null);
-let mapInstance: any = null;
+let mapInstance: YandexMap | null = null;
 
 const { $loadYandexMaps } = useNuxtApp();
 
@@ -21,7 +22,9 @@ onMounted(async () => {
   try {
     const ymaps = await $loadYandexMaps();
 
-    if (!mapEl.value) return;
+    if (!mapEl.value) {
+      return;
+    }
 
     mapInstance = new ymaps.Map(mapEl.value, {
       center: props.center,

@@ -12,7 +12,7 @@ defineProps<{
 
     <article class="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
       <div class="relative overflow-hidden">
-        <img :src="preview.image" :alt="preview.title" class="h-56 w-full object-cover" />
+        <img :src="preview.image" :alt="preview.title" class="h-56 w-full object-cover" >
 
         <div
           class="absolute right-3 top-3 rounded-full bg-white px-3 py-1 text-xs font-semibold text-secondary-600 shadow-sm"

@@ -18,7 +18,7 @@ const features = [
               src="/images/production.png"
               alt="Производство тротуарной плитки"
               class="h-[420px] w-full object-cover sm:h-[480px] lg:h-[520px]"
-            />
+            >
           </div>
 
           <div
