@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { validateContact } from '~/utils/validation';
 import { reactive } from 'vue';
 import { getApiErrorMessage } from '~/utils/api-error';
 import { ContactsApi } from '~/api/contacts.api';
@@ -29,6 +30,7 @@ const contactItems = [
 const toast = useToast();
 
 const isLoading = ref(false);
+const errors = ref<Record<string, string>>({});
 
 const formState = reactive({
   name: '',
@@ -42,6 +44,10 @@ async function submitRequest() {
     return;
   }
 
+  errors.value = validateContact(formState);
+  if (Object.keys(errors.value).length) {
+    return;
+  }
   isLoading.value = true;
 
   try {
@@ -124,9 +130,11 @@ async function submitRequest() {
               <input v-model="formState.company" type="text" tabindex="-1" autocomplete="off" >
             </div>
 
-            <UFormField label="Ваше имя" name="name">
+            <UFormField label="Ваше имя" name="name" :error="errors.name" required>
               <UInput
                 v-model="formState.name"
+                autocomplete="name"
+                :maxlength="200"
                 size="xl"
                 placeholder="Иван Иванов"
                 class="w-full"
@@ -134,9 +142,12 @@ async function submitRequest() {
               />
             </UFormField>
 
-            <UFormField label="Телефон" name="phone">
+            <UFormField label="Телефон" name="phone" :error="errors.phone" required>
               <UInput
                 v-model="formState.phone"
+                type="tel"
+                autocomplete="tel"
+                :maxlength="100"
                 size="xl"
                 placeholder="+375 (__) ___-__-__"
                 class="w-full"
@@ -144,9 +155,10 @@ async function submitRequest() {
               />
             </UFormField>
 
-            <UFormField label="Комментарий" name="comment">
+            <UFormField label="Комментарий" name="comment" :error="errors.comment" required>
               <UTextarea
                 v-model="formState.comment"
+                :maxlength="10000"
                 :rows="5"
                 placeholder="Напишите, что вас интересует..."
                 class="w-full"

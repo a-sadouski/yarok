@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { getApiErrorMessage, getApiErrorStatus } from '~/utils/api-error';
 import { AdminApi } from '~/api/admin.api';
 const toast = useToast();
 
@@ -20,10 +21,13 @@ async function onSubmit() {
     await AdminApi.login(form);
 
     await navigateTo('/admin/products');
-  } catch {
+  } catch (error) {
     toast.add({
       title: 'Ошибка авторизации',
-      description: 'Проверьте логин и пароль',
+      description:
+        getApiErrorStatus(error) === 401
+          ? 'Проверьте логин и пароль'
+          : getApiErrorMessage(error, 'Сервис входа недоступен. Повторите попытку позже.'),
       color: 'error',
     });
   } finally {
@@ -38,9 +42,20 @@ async function onSubmit() {
       <h2 class="text-2xl font-bold text-primary-700">Вход в админку</h2>
 
       <form class="mt-6 space-y-4" @submit.prevent="onSubmit">
-        <UInput v-model="form.login" placeholder="Логин" size="xl" />
-        <UInput v-model="form.password" type="password" placeholder="Пароль" size="xl" />
-        <UButton type="submit" block size="xl" :loading="isLoading">Войти</UButton>
+        <UFormField label="Логин" required
+          ><UInput v-model="form.login" autocomplete="username" :maxlength="200" required placeholder="Логин" size="xl"
+        /></UFormField>
+        <UFormField label="Пароль" required
+          ><UInput
+            v-model="form.password"
+            autocomplete="current-password"
+            :maxlength="1024"
+            required
+            type="password"
+            placeholder="Пароль"
+            size="xl"
+        /></UFormField>
+        <UButton type="submit" block size="xl" :loading="isLoading" :disabled="isLoading">Войти</UButton>
       </form>
     </div>
   </div>

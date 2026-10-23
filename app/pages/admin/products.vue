@@ -7,6 +7,7 @@ definePageMeta({ middleware: ['admin'] });
 const {
   isProductModalOpen,
   isEditing,
+  sessionExpired,
   formState,
   categoryOptions,
   colorOptions,
@@ -14,6 +15,9 @@ const {
   productName,
   filteredProducts,
   isSaving,
+  isReadingImage,
+  isLoggingOut,
+  logout,
   isLoading,
   loadError,
   loadProducts,
@@ -41,9 +45,22 @@ const {
           </p>
         </div>
 
-        <UInput v-model="productName" icon="i-lucide-search" class="w-full sm:w-80" placeholder="Поиск по названию" />
+        <UInput
+          v-model="productName"
+          icon="i-lucide-search"
+          class="w-full sm:w-80"
+          aria-label="Поиск товара по названию"
+          placeholder="Поиск по названию"
+        />
 
-        <div class="flex items-center">
+        <div class="flex items-center gap-3">
+          <UButton
+            label="Выйти"
+            variant="soft"
+            :loading="isLoggingOut"
+            :disabled="isSaving || isLoggingOut"
+            @click="logout"
+          />
           <UButton
             label="Добавить товар"
             icon="i-lucide-plus"
@@ -57,6 +74,11 @@ const {
 
     <section class="py-8 sm:py-10">
       <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <p v-if="sessionExpired" role="alert" class="mb-4">
+          Сессия истекла.
+          <NuxtLink to="/admin/login" target="_blank" rel="noopener" class="underline">Войдите в новой вкладке</NuxtLink
+          >, затем повторите действие. Не закрывайте эту вкладку, чтобы сохранить данные формы.
+        </p>
         <p v-if="isLoading" role="status">Загрузка товаров...</p>
         <div v-else-if="loadError" role="alert">
           <p>{{ loadError }}</p>
@@ -77,6 +99,8 @@ const {
       v-model:form-state="formState"
       :is-editing="isEditing"
       :saving="isSaving"
+      :reading-image="isReadingImage"
+      :session-expired="sessionExpired"
       :category-options="categoryOptions"
       :color-options="colorOptions"
       :preview-card="previewCard"

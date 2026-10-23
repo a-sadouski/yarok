@@ -2,7 +2,10 @@ export default defineNuxtConfig({
   // Keep browser requests and admin cookies on the Nuxt origin.
   routeRules: {
     '/api/**': {
-      proxy: `${process.env.YAROK_BACKEND_URL || 'http://localhost:5050'}/api/**`,
+      proxy: {
+        to: `${process.env.YAROK_BACKEND_URL || 'http://localhost:5050'}/api/**`,
+        streamRequest: true,
+      },
     },
   },
   app: {

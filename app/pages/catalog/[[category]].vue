@@ -92,6 +92,11 @@ const seoContent = computed(() => (category.value ? (seoTextMap[category.value] 
 
 const { categories, products, productMetaById, isLoading, error, refresh } = await useCatalog();
 const currentCategory = computed(() => categories.value.find(item => item.slug === category.value));
+watchEffect(() => {
+  if (!isLoading.value && !error.value && category.value && !currentCategory.value) {
+    showError({ statusCode: 404, statusMessage: 'Категория не найдена' });
+  }
+});
 </script>
 <template>
   <div class="min-h-screen bg-[#f8f6f5] text-primary-700">
@@ -119,7 +124,10 @@ const currentCategory = computed(() => categories.value.find(item => item.slug =
 
       <section v-else class="py-6">
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <CatalogTabs :categories="categories" :products="products" :product-meta-by-id="productMetaById" />
+          <p v-if="!categories.length" role="status">
+            Каталог пока пуст. Свяжитесь с нами, чтобы уточнить ассортимент.
+          </p>
+          <CatalogTabs v-else :categories="categories" :products="products" :product-meta-by-id="productMetaById" />
         </div>
       </section>
 

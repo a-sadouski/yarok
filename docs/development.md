@@ -4,21 +4,21 @@
 
 В `yarok/.env`:
 
-| Переменная | Назначение |
-| --- | --- |
-| `YAROK_BACKEND_URL` | Backend без завершающего `/`; по умолчанию `http://localhost:5050`, применяется при сборке |
-| `NUXT_PUBLIC_SITE_URL` | Абсолютный адрес сайта для canonical и Open Graph |
-| `NUXT_PUBLIC_YANDEX_MAPS_API_KEY` | Публичный ключ карты; ограничьте разрешённые origin |
+| Переменная                        | Назначение                                                                                 |
+| --------------------------------- | ------------------------------------------------------------------------------------------ |
+| `YAROK_BACKEND_URL`               | Backend без завершающего `/`; по умолчанию `http://localhost:5050`, применяется при сборке |
+| `NUXT_PUBLIC_SITE_URL`            | Абсолютный адрес сайта для canonical и Open Graph                                          |
+| `NUXT_PUBLIC_YANDEX_MAPS_API_KEY` | Публичный ключ карты; ограничьте разрешённые origin                                        |
 
 В `yarok-be/.env`, на основе его `.env.example`:
 
-| Переменная | Назначение |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL URI или Npgsql connection string |
-| `ADMIN_LOGIN`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET` | Администратор и подпись сессии; замените шаблонные значения |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` | Storage; service-role key используется только backend |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `CONTACT_TO_EMAIL` | SMTP с авторизацией и тестовый получатель |
-| `ASPNETCORE_ENVIRONMENT`, `ASPNETCORE_URLS` | Локально: `Development`, `http://localhost:5050` |
+| Переменная                                                                                | Назначение                                                  |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `DATABASE_URL`                                                                            | PostgreSQL URI или Npgsql connection string                 |
+| `ADMIN_LOGIN`, `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET`                                   | Администратор и подпись сессии; замените шаблонные значения |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`                                                    | Storage; service-role key используется только backend       |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `CONTACT_TO_EMAIL` | SMTP с авторизацией и тестовый получатель                   |
+| `ASPNETCORE_ENVIRONMENT`, `ASPNETCORE_URLS`                                               | Локально: `Development`, `http://localhost:5050`            |
 
 Оба `.env` исключены из Git. `Start-Dev.ps1` загружает backend `.env`; обычный `dotnet run` этого не делает. После изменения frontend `.env` перезапустите Nuxt.
 
@@ -31,6 +31,7 @@ Backend проверяет наличие настроек при старте, 
 ```powershell
 createdb -h localhost -p 5432 -U postgres yarok
 psql -h localhost -p 5432 -U postgres -d yarok -v ON_ERROR_STOP=1 -f ../yarok-be/database/001_schema.sql
+psql -h localhost -p 5432 -U postgres -d yarok -v ON_ERROR_STOP=1 -f ../yarok-be/database/003_integrity.sql
 psql -h localhost -p 5432 -U postgres -d yarok -v ON_ERROR_STOP=1 -f docs/seed.local.sql
 ```
 
@@ -60,3 +61,17 @@ psql -h localhost -p 5432 -U postgres -d yarok -v ON_ERROR_STOP=1 -f docs/seed.l
 - В production не работает вход: backend использует secure cookie; нужен HTTPS.
 
 Актуальные маршруты описаны в `yarok-be/README.md`, реализация — `yarok-be/src/Yarok.Api/Program.cs`. Frontend обращается к ним через `/api/**`.
+
+## Изменения API и ограничения окружения
+
+- Админка читает все товары через `/api/admin/products`, публичный каталог — только активные через `/api/products`.
+- Для входа, выхода и записи товара передаётся `X-Yarok-Admin: 1`; backend проверяет его для защиты от CSRF.
+  Frontend и backend этих изменений нужно обновлять вместе.
+- Удаление изображения передаётся явно как `removeImage=true`; вместе с новой картинкой этот флаг запрещён.
+- В backend `.env` добавьте `TRUSTED_PROXY_IPS=127.0.0.1,::1` для локального Nuxt.
+  Nuxt заменяет клиентский `X-Forwarded-For` адресом TCP-клиента. Для контейнеров укажите фактический IP Nuxt;
+  если перед Nuxt есть ещё proxy, лимиты по умолчанию объединяют его клиентов — доверенную цепочку нужно настроить при развёртывании.
+- `003_integrity.sql` проверена в одноразовой локальной БД. К существующей БД её применяют вручную
+  после резервной копии и проверки данных; миграции автоматически не выполняются.
+- Реальные SMTP и Supabase в автоматических проверках заменены заглушками. Их доступность, TLS,
+  права bucket и production proxy требуют отдельной проверки при развёртывании.

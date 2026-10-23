@@ -23,7 +23,7 @@ const activeCategory = computed(() => {
 
   const matchedCategory = props.categories.find(category => category.slug === activeCategorySlug.value);
 
-  return matchedCategory || props.categories[0];
+  return activeCategorySlug.value ? matchedCategory : props.categories[0];
 });
 
 const activeCategoryId = computed(() => activeCategory.value?.id);
@@ -71,6 +71,7 @@ const currentProducts = computed(() => {
           value-key="value"
           option-attribute="label"
           class="w-full"
+          aria-label="Категория товаров"
           @update:model-value="
             value => {
               const selectedItem = tabItems.find(item => item.value === value);

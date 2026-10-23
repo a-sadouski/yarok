@@ -53,6 +53,7 @@ npm run dev
 
 ```powershell
 npm run lint
+npm test
 npm run typecheck
 npm run build
 ```
@@ -63,7 +64,20 @@ npm run build
 & ../yarok-be/scripts/Test-Isolated.ps1
 ```
 
-Frontend-тесты и CI пока не настроены.
+Регрессионные тесты используют встроенный Node test runner и установленный `tsx`; CI пока не настроен.
+
+Проверка связки Nuxt → .NET → PostgreSQL с локальной заглушкой Storage:
+
+```powershell
+# Требуются запущенный Docker и локальный образ postgres:16.
+dotnet build ../yarok-be/Yarok.slnx
+npm run build
+node scripts/test-local-integration.mjs
+```
+
+Скрипт создаёт и удаляет отдельный контейнер БД, не читает `.env` и не обращается к существующим БД,
+SMTP или Supabase. Требуются свободные локальные порты 5050, 13000, 15440 и 15441.
+Сборка frontend для этой проверки должна использовать стандартный `YAROK_BACKEND_URL=http://localhost:5050`.
 
 ## Production
 
@@ -81,3 +95,5 @@ node .output/server/index.mjs
 `YAROK_BACKEND_URL` задаётся **до сборки**: адрес встраивается в правило proxy. В production передавайте `NUXT_PUBLIC_SITE_URL` и `NUXT_PUBLIC_YANDEX_MAPS_API_KEY` через окружение процесса: Node-сервер не загружает `.env` автоматически. API требует работающего backend; статическая генерация не заменяет серверный proxy.
 
 Настройки, тестовые данные и ручная проверка: [локальное окружение](docs/development.md).
+
+Результаты проверок и оставшиеся ограничения: [аудит надёжности и защиты](docs/reliability-audit.md).

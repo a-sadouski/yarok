@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { validateProduct } from '~/utils/validation';
 import ProductPreviewCard from './ProductPreviewCard.vue';
 import type {
   CategoryOption,
@@ -14,6 +15,8 @@ const props = defineProps<{
   open: boolean;
   isEditing: boolean;
   saving: boolean;
+  readingImage: boolean;
+  sessionExpired: boolean;
   formState: ProductFormState;
   categoryOptions: CategoryOption[];
   colorOptions: ColorOption[];
@@ -66,59 +69,14 @@ function removeVariant(index: number) {
 }
 
 function handleSubmit() {
-  if (!props.formState.name.trim()) {
-    toast.add({
-      title: 'Введите название товара',
-      color: 'error',
-    });
-
+  if (props.saving || props.readingImage) {
     return;
   }
-
-  if (!props.formState.categoryId) {
-    toast.add({
-      title: 'Выберите категорию',
-      color: 'error',
-    });
-
+  const error = validateProduct(props.formState);
+  if (error) {
+    toast.add({ title: error, color: 'error' });
     return;
   }
-
-  if (!props.formState.isVariable) {
-    if (!props.formState.price || Number(props.formState.price) <= 0) {
-      toast.add({
-        title: 'Введите цену товара',
-        color: 'error',
-      });
-
-      return;
-    }
-  }
-
-  if (props.formState.isVariable) {
-    if (!props.formState.variants.length) {
-      toast.add({
-        title: 'Добавьте хотя бы один вариант товара',
-        color: 'error',
-      });
-
-      return;
-    }
-
-    const hasInvalidVariant = props.formState.variants.some(
-      variant => !variant.colorId || !variant.price || Number(variant.price) <= 0,
-    );
-
-    if (hasInvalidVariant) {
-      toast.add({
-        title: 'Заполните цвет и цену для всех вариантов',
-        color: 'error',
-      });
-
-      return;
-    }
-  }
-
   emit('submit');
 }
 </script>
@@ -146,6 +104,12 @@ function handleSubmit() {
         </div>
 
         <UForm :disabled="saving" :state="formState" @submit="handleSubmit">
+          <p v-if="sessionExpired" role="alert" class="mt-4">
+            Сессия истекла.
+            <NuxtLink to="/admin/login" target="_blank" rel="noopener" class="underline"
+              >Войдите в новой вкладке</NuxtLink
+            >, затем повторите сохранение. Данные формы сохранены в этой вкладке.
+          </p>
           <div class="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_380px]">
             <div class="space-y-5">
               <UFormField label="Название товара" name="name" required>
@@ -190,6 +154,7 @@ function handleSubmit() {
                   </div>
 
                   <USwitch
+                    aria-label="Вариативный товар"
                     :model-value="formState.isVariable"
                     @update:model-value="updateField('isVariable', $event)"
                   />
@@ -197,6 +162,7 @@ function handleSubmit() {
               </UFormField>
 
               <template v-if="!formState.isVariable">
+                <p class="text-sm text-slate-500">Цвет простого товара — серый.</p>
                 <div class="grid gap-4 sm:grid-cols-2">
                   <UFormField label="Цена" name="price" required>
                     <UInput
@@ -228,7 +194,11 @@ function handleSubmit() {
                       <p class="text-sm font-semibold text-primary-700">В наличии</p>
                     </div>
 
-                    <USwitch :model-value="formState.inStock" @update:model-value="updateField('inStock', $event)" />
+                    <USwitch
+                      aria-label="Товар в наличии"
+                      :model-value="formState.inStock"
+                      @update:model-value="updateField('inStock', $event)"
+                    />
                   </div>
                 </UFormField>
               </template>
@@ -318,6 +288,7 @@ function handleSubmit() {
                         </div>
 
                         <USwitch
+                          aria-label="Вариант в наличии"
                           :model-value="variant.inStock"
                           @update:model-value="updateVariant(index, 'inStock', $event)"
                         />
@@ -334,9 +305,15 @@ function handleSubmit() {
                   >
                     <UIcon name="i-lucide-image-plus" class="h-7 w-7 text-secondary-600" />
                     <span class="mt-3 text-sm font-semibold text-primary-700">Выбрать изображение</span>
-                    <span class="mt-1 text-xs text-slate-500">PNG, JPG, WEBP</span>
+                    <span class="mt-1 text-xs text-slate-500">PNG, JPEG, WebP, GIF · до 10 МБ</span>
 
-                    <input type="file" accept="image/*" class="hidden" @change="emit('imageChange', $event)" >
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      :disabled="saving"
+                      class="hidden"
+                      @change="emit('imageChange', $event)"
+                    >
                   </label>
 
                   <div v-if="formState.previewImage" class="flex items-center gap-3">
@@ -360,7 +337,11 @@ function handleSubmit() {
                     <p class="mt-1 text-xs text-slate-500">Неактивные товары можно скрыть без удаления.</p>
                   </div>
 
-                  <USwitch :model-value="formState.isActive" @update:model-value="updateField('isActive', $event)" />
+                  <USwitch
+                    aria-label="Показывать товар в каталоге"
+                    :model-value="formState.isActive"
+                    @update:model-value="updateField('isActive', $event)"
+                  />
                 </div>
               </UFormField>
             </div>
@@ -371,7 +352,7 @@ function handleSubmit() {
               <div class="mt-12 flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
                 <UButton
                   label="Отмена"
-                  :disabled="saving"
+                  :disabled="saving || readingImage"
                   variant="soft"
                   color="neutral"
                   class="rounded-full"
@@ -379,7 +360,7 @@ function handleSubmit() {
                 />
 
                 <UButton
-                  :loading="saving"
+                  :loading="saving || readingImage"
                   :disabled="saving"
                   type="submit"
                   :label="isEditing ? 'Сохранить изменения' : 'Добавить товар'"

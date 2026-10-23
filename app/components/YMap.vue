@@ -17,12 +17,20 @@ const mapEl = ref<HTMLElement | null>(null);
 let mapInstance: YandexMap | null = null;
 
 const { $loadYandexMaps } = useNuxtApp();
+const isLoading = ref(false);
+const hasError = ref(false);
+let disposed = false;
 
-onMounted(async () => {
+async function initializeMap() {
+  if (isLoading.value || disposed) {
+    return;
+  }
+  isLoading.value = true;
+  hasError.value = false;
   try {
     const ymaps = await $loadYandexMaps();
 
-    if (!mapEl.value) {
+    if (!mapEl.value || disposed) {
       return;
     }
 
@@ -43,12 +51,21 @@ onMounted(async () => {
     );
 
     mapInstance.geoObjects.add(placemark);
-  } catch (error) {
-    console.error('Yandex Maps init error:', error);
+  } catch {
+    mapInstance?.destroy();
+    mapInstance = null;
+    if (!disposed) {
+      hasError.value = true;
+    }
+  } finally {
+    isLoading.value = false;
   }
-});
+}
+
+onMounted(initializeMap);
 
 onBeforeUnmount(() => {
+  disposed = true;
   if (mapInstance) {
     mapInstance.destroy();
     mapInstance = null;
@@ -57,5 +74,17 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="mapEl" :style="{ width: '100%', height }" class="rounded-2xl overflow-hidden" />
+  <div :style="{ width: '100%', height }" class="relative rounded-2xl overflow-hidden">
+    <div ref="mapEl" class="h-full w-full" aria-label="Расположение офиса и склада" />
+    <div
+      v-if="isLoading || hasError"
+      class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-white p-4 text-center text-primary-700"
+      role="status"
+    >
+      <p>
+        {{ isLoading ? 'Загрузка карты...' : 'Не удалось загрузить карту. Адрес: г. Слуцк, ул. М. Богдановича, 220.' }}
+      </p>
+      <UButton v-if="hasError" label="Повторить загрузку" @click="initializeMap" />
+    </div>
+  </div>
 </template>

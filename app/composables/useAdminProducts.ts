@@ -7,9 +7,12 @@ import type {
   ProductItem,
   ProductCategory,
 } from '~/types/product';
+import { AdminApi } from '~/api/admin.api';
+import { validateProduct, validateProductImage } from '~/utils/validation';
 import { ProductsApi } from '~/api/products.api';
-import { getApiErrorMessage } from '~/utils/api-error';
+import { getApiErrorMessage, getApiErrorStatus } from '~/utils/api-error';
 import { slugify } from '~/utils/slugify';
+import { createProductPayload } from '~/utils/product-payload';
 
 export function useAdminProducts() {
   const toast = useToast();
@@ -18,6 +21,7 @@ export function useAdminProducts() {
 
   const isProductModalOpen = ref(false);
   const isEditing = ref(false);
+  const sessionExpired = ref(false);
 
   const products = ref<ProductItem[]>([]);
   const categories = ref<ProductCategory[]>([]);
@@ -66,6 +70,10 @@ export function useAdminProducts() {
 
   const formState = ref<ProductFormState>(createInitialFormState());
   const imageFile = ref<File | null>(null);
+  const removeImage = ref(false);
+  const originalImage = ref('');
+  const isReadingImage = ref(false);
+  const originalVariants = ref<ProductItem['variants']>([]);
 
   const grayColorId = computed<number | null>(() => {
     const grayColor = colors.value.find(color => color.slug === DEFAULT_GRAY_COLOR_SLUG);
@@ -89,6 +97,10 @@ export function useAdminProducts() {
   function resetFormState() {
     formState.value = createInitialFormState();
     imageFile.value = null;
+    removeImage.value = false;
+    originalImage.value = '';
+    originalVariants.value = [];
+    isReadingImage.value = false;
     editingProductId.value = null;
   }
 
@@ -111,13 +123,31 @@ export function useAdminProducts() {
       return;
     }
 
+    const validationError = validateProductImage(file);
+    target.value = '';
+    if (validationError) {
+      toast.add({ title: validationError, color: 'error' });
+      return;
+    }
     imageFile.value = file;
+    removeImage.value = false;
+    isReadingImage.value = true;
 
     const reader = new FileReader();
     reader.onload = () => {
       if (imageFile.value === file && isProductModalOpen.value) {
         formState.value.previewImage = String(reader.result || '');
+        isReadingImage.value = false;
       }
+    };
+    reader.onerror = () => {
+      if (imageFile.value !== file) {
+        return;
+      }
+      imageFile.value = null;
+      isReadingImage.value = false;
+      formState.value.previewImage = originalImage.value;
+      toast.add({ title: 'Не удалось прочитать изображение. Выберите файл ещё раз.', color: 'error' });
     };
     reader.readAsDataURL(file);
   }
@@ -125,6 +155,8 @@ export function useAdminProducts() {
   function handleRemoveImage() {
     imageFile.value = null;
     formState.value.previewImage = '';
+    removeImage.value = Boolean(originalImage.value);
+    isReadingImage.value = false;
   }
 
   function getCategoryLabel(categoryId: number | null) {
@@ -138,42 +170,31 @@ export function useAdminProducts() {
   const isSaving = ref(false);
 
   async function handleSubmitProduct() {
-    if (isSaving.value) {
+    if (isSaving.value || isReadingImage.value) {
+      return;
+    }
+    if (!formState.value.isVariable && !grayColorId.value) {
+      toast.add({ title: 'Серый цвет не настроен в справочнике. Обратитесь к администратору.', color: 'error' });
+      return;
+    }
+    const validationError = validateProduct(formState.value);
+    if (validationError) {
+      toast.add({ title: validationError, color: 'error' });
+      return;
+    }
+    if (!slugify(formState.value.name)) {
+      toast.add({ title: 'Название должно содержать буквы или цифры', color: 'error' });
       return;
     }
     isSaving.value = true;
     try {
-      const formData = new FormData();
-
-      formData.append('name', formState.value.name);
-      formData.append('slug', slugify(formState.value.name));
-      formData.append('description', formState.value.description || '');
-      formData.append('categoryId', String(formState.value.categoryId));
-      formData.append('isVariable', String(formState.value.isVariable));
-      formData.append('isActive', String(formState.value.isActive));
-
-      if (!formState.value.isVariable) {
-        formData.append('colorId', String(grayColorId.value ?? ''));
-        formData.append('price', formState.value.price);
-        formData.append('sku', formState.value.sku || '');
-        formData.append('inStock', String(formState.value.inStock));
-      } else {
-        formData.append(
-          'variants',
-          JSON.stringify(
-            formState.value.variants.map(variant => ({
-              colorId: variant.colorId,
-              price: String(variant.price),
-              sku: variant.sku || '',
-              inStock: variant.inStock,
-            })),
-          ),
-        );
-      }
-
-      if (imageFile.value) {
-        formData.append('image', imageFile.value);
-      }
+      const formData = createProductPayload(
+        formState.value,
+        imageFile.value,
+        removeImage.value,
+        originalVariants.value,
+        grayColorId.value,
+      );
 
       if (isEditing.value) {
         if (!editingProductId.value) {
@@ -189,14 +210,20 @@ export function useAdminProducts() {
         title: isEditing.value ? 'Товар обновлен' : 'Товар создан',
         color: 'success',
       });
+      sessionExpired.value = false;
 
       handleCloseModal();
       try {
-        products.value = await ProductsApi.getAllProducts();
+        products.value = await AdminApi.products();
       } catch {
         loadError.value = 'Товар сохранён, но список не обновился. Повторите загрузку.';
       }
     } catch (error) {
+      if (getApiErrorStatus(error) === 401) {
+        sessionExpired.value = true;
+        toast.add({ title: 'Сессия истекла. Войдите в новой вкладке и повторите сохранение.', color: 'error' });
+        return;
+      }
       toast.add({
         title: getApiErrorMessage(error, 'Не удалось сохранить товар. Попробуйте ещё раз.'),
         color: 'error',
@@ -213,6 +240,8 @@ export function useAdminProducts() {
     isProductModalOpen.value = true;
     editingProductId.value = product.id;
 
+    originalImage.value = product.previewImage ?? '';
+    originalVariants.value = product.variants;
     formState.value.name = product.name;
     formState.value.categoryId = product.categoryId;
     formState.value.description = product.description || '';
@@ -251,18 +280,38 @@ export function useAdminProducts() {
     loadError.value = '';
     try {
       const [loadedProducts, loadedCategories, loadedColors] = await Promise.all([
-        ProductsApi.getAllProducts(),
+        AdminApi.products(),
         ProductsApi.getAllCategories(),
         ProductsApi.getAllColors(),
       ]);
 
       products.value = loadedProducts;
+      sessionExpired.value = false;
       categories.value = loadedCategories;
       colors.value = loadedColors;
     } catch (error) {
+      if (getApiErrorStatus(error) === 401) {
+        sessionExpired.value = true;
+      }
       loadError.value = getApiErrorMessage(error, 'Не удалось загрузить данные админки. Повторите загрузку.');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  const isLoggingOut = ref(false);
+  async function logout() {
+    if (isSaving.value || isLoggingOut.value) {
+      return;
+    }
+    isLoggingOut.value = true;
+    try {
+      await AdminApi.logout();
+      await navigateTo('/admin/login');
+    } catch (error) {
+      toast.add({ title: getApiErrorMessage(error, 'Не удалось выйти. Повторите попытку.'), color: 'error' });
+    } finally {
+      isLoggingOut.value = false;
     }
   }
 
@@ -271,6 +320,7 @@ export function useAdminProducts() {
   return {
     isProductModalOpen,
     isEditing,
+    sessionExpired,
     formState,
     categoryOptions,
     colorOptions,
@@ -278,6 +328,9 @@ export function useAdminProducts() {
     productName,
     filteredProducts,
     isSaving,
+    isReadingImage,
+    isLoggingOut,
+    logout,
     isLoading,
     loadError,
     loadProducts,

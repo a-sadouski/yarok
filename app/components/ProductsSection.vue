@@ -31,9 +31,12 @@ const categoryUiMap: Record<string, { image: string; alt: string }> = {
   },
 };
 
-const { data: categories } = await useAsyncData<ProductCategory[]>('product-categories-home', () =>
-  ProductsApi.getAllCategories(),
-);
+const {
+  data: categories,
+  pending,
+  error,
+  refresh,
+} = await useAsyncData<ProductCategory[]>('product-categories-home', () => ProductsApi.getAllCategories());
 
 const items = computed((): CategoryCard[] => {
   return (categories.value || []).reduce<CategoryCard[]>((acc, category) => {
@@ -74,7 +77,13 @@ const items = computed((): CategoryCard[] => {
         </NuxtLink>
       </div>
 
-      <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      <p v-if="pending" role="status">Загрузка ассортимента...</p>
+      <div v-else-if="error" role="alert">
+        <p>Не удалось загрузить ассортимент.</p>
+        <UButton label="Повторить загрузку" class="mt-3" @click="refresh()" />
+      </div>
+      <p v-else-if="!items.length" role="status">Ассортимент уточняется. Свяжитесь с нами для консультации.</p>
+      <div v-else class="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <NuxtLink v-for="item in items" :key="item.id" :to="`/catalog/${item.slug}`" class="group block">
           <article>
             <div class="relative overflow-hidden rounded-3xl bg-white">
