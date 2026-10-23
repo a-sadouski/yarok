@@ -25,11 +25,18 @@ defineProps<{
 
     <div class="relative z-10 flex min-h-76 items-center">
       <div class="mx-auto w-full max-w-7xl px-4 pt-28 pb-16 sm:px-6 lg:px-8">
-        <div class="max-w-3xl">
+        <div class="max-w-7xl">
           <p
-            class="mb-4 inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white/90 backdrop-blur"
+            class="mb-4 text-xs inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 font-medium text-white/90 backdrop-blur"
           >
             Продажа тротуарной плитки в Беларуси
+          </p>
+
+          <p
+            class="mb-4 ml-2 text-xs inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 font-medium text-white/90 backdrop-blur"
+          >
+            Внешнеэкономическая деятельность, оказание консультативных, инжиниринговых, маркетинговых услуг в области
+            производства сахарной свеклы
           </p>
 
           <h1 class="max-w-3xl text-4xl font-extrabold leading-tight text-white sm:text-4xl lg:text-6xl">

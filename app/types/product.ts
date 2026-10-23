@@ -69,6 +69,7 @@ export interface ColorOption {
 }
 
 export interface ProductPreviewCardModel {
+  categoryLabel: string;
   title: string;
   image: string;
   price: string;

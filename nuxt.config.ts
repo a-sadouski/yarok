@@ -1,4 +1,10 @@
 export default defineNuxtConfig({
+  // Keep browser requests and admin cookies on the Nuxt origin.
+  routeRules: {
+    '/api/**': {
+      proxy: `${process.env.YAROK_BACKEND_URL || 'http://localhost:5050'}/api/**`,
+    },
+  },
   app: {
     head: {
       link: [{ rel: 'icon', type: 'image/png', href: '/favicon.png' }],
@@ -6,18 +12,6 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    databaseUrl: process.env.DATABASE_URL,
-    supabaseUrl: process.env.SUPABASE_URL,
-    supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY,
-    adminLogin: process.env.ADMIN_LOGIN,
-    adminPassword: process.env.ADMIN_PASSWORD,
-    adminSessionSecret: process.env.ADMIN_SESSION_SECRET,
-    smtpHost: process.env.SMTP_HOST,
-    smtpPort: process.env.SMTP_PORT,
-    smtpSecure: process.env.SMTP_SECURE,
-    smtpUser: process.env.SMTP_USER,
-    smtpPassword: process.env.SMTP_PASSWORD,
-    contactToEmail: process.env.CONTACT_TO_EMAIL,
     public: {
       yandexMapsApiKey: process.env.NUXT_PUBLIC_YANDEX_MAPS_API_KEY,
       supabaseUrl: process.env.SUPABASE_URL,

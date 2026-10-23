@@ -35,10 +35,10 @@ const columns = computed(() => [
       h('span', { class: 'text-sm text-slate-600' }, props.getCategoryLabel(row.original.categoryId)),
   },
   {
-    accessorKey: 'previewPrice',
+    id: 'price',
     header: 'Цена',
     cell: ({ row }: { row: { original: ProductItem } }) =>
-      h('span', { class: 'text-sm text-slate-600' }, formatPrice(row.original.previewPrice)),
+      h('span', { class: 'text-sm text-slate-600' }, formatPrice(row.original.variants.length ? Math.min(...row.original.variants.map(variant => Number(variant.price))) : 0)),
   },
   {
     accessorKey: 'isActive',

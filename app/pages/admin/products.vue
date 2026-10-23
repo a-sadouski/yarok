@@ -84,6 +84,7 @@ const previewCard = computed<ProductPreviewCardModel>(() => {
 
   return {
     title: formState.name || 'Новый товар',
+    categoryLabel: getCategoryLabel(formState.categoryId),
     image: formState.previewImage || '',
     price: !formState.isVariable ? formState.price || '—' : defaultVariant?.price || '—',
     isActive: formState.isActive,
@@ -232,7 +233,7 @@ function openEditModal(product: ProductItem) {
   if (!product.isVariable) {
     const firstVariant = product.variants?.[0];
 
-    formState.price = firstVariant?.price || '';
+    formState.price = String(firstVariant?.price ?? '');
     formState.sku = firstVariant?.sku || '';
     formState.inStock = firstVariant?.inStock ?? true;
     formState.variants = [];
@@ -243,7 +244,7 @@ function openEditModal(product: ProductItem) {
 
     formState.variants = (product.variants || []).map(variant => ({
       colorId: variant.colorId,
-      price: variant.price || '',
+      price: String(variant.price ?? ''),
       sku: variant.sku || '',
       inStock: variant.inStock ?? true,
     }));

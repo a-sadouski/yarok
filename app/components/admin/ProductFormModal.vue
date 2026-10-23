@@ -115,7 +115,7 @@ function handleSubmit() {
 
               <UFormField label="Категория" name="categoryId" required>
                 <USelect
-                  v-model="formState.categoryId"
+                  :model-value="formState.categoryId ?? undefined" @update:model-value="formState.categoryId = $event ?? null"
                   :items="categoryOptions"
                   value-key="value"
                   option-attribute="label"
@@ -222,7 +222,7 @@ function handleSubmit() {
 
                     <UFormField label="Цвет" :name="`variants.${index}.colorId`" required>
                       <USelect
-                        v-model="variant.colorId"
+                        :model-value="variant.colorId ?? undefined" @update:model-value="variant.colorId = $event ?? null"
                         :items="colorOptions"
                         value-key="value"
                         option-attribute="label"
